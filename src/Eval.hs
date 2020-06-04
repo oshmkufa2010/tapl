@@ -3,9 +3,11 @@ module Eval (
   tmSub,
   tmSubTop,
   eval1,
+  showTerm,
 ) where
 
 import Types
+import Control.Monad.State
 
 tmMap :: Int -> (Int -> Index -> Term) -> Term -> Term
 tmMap c onVar (TmVar k) = onVar c k
@@ -28,3 +30,26 @@ eval1 (TmApp m@(TmAbs _ _ _) n) = eval1 n >>= \n' -> eval1 $ TmApp m n
 eval1 (TmApp m n) = eval1 m >>= \m' -> eval1 $ TmApp m' n
 eval1 m@(TmAbs _ _ _) = return m
 eval1 _ = Nothing
+
+showTerm :: Term -> String
+showTerm term = evalState (showTerm' term) []
+  where
+    showTerm' :: Term -> State [String] String
+    showTerm' (TmAbs name _ m) = do
+      env <- get
+      let name' = if name `elem` env then (name ++ "'") else name
+      put (name' : env)
+      next <- showTerm' m
+      put env
+      return $ "λ" ++ name' ++ ". " ++ next
+    showTerm' (TmApp m n) = do
+      term1 <- showTerm' m
+      term2 <- showTerm' n
+      return $ case (m, n) of
+        (TmVar _, TmVar _) -> term1 ++ " " ++ term2
+        (TmVar _, _) -> term1 ++ " (" ++ term2 ++ ")"
+        (_, TmVar _) -> "(" ++ term1 ++ ") " ++ term2
+        _ -> "(" ++ term1 ++ ") " ++ "(" ++ term2 ++ ")"
+    showTerm' (TmVar i) = do
+      env <- get
+      return $ env !! i 
