@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d4b63c53594e35f251b06e990add8c528d344b9dee4fae49e73a890f8fbd2e53
+-- hash: b0939b04572aa9898035d93a78b5e079c9ae640153c0e05c5a24db361f4873cc
 
 name:           tapl-haskell
 version:        0.1.0.0
@@ -28,7 +28,6 @@ source-repository head
 library
   exposed-modules:
       Eval
-      Lib
       Parser
       Types
   other-modules:

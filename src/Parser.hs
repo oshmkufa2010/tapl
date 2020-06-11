@@ -17,13 +17,13 @@ type Parser a = ParsecT String [Var] (Either String) a
 
 parse :: String -> Either String Term
 parse str = do
-  result <- runParserT (termP <* eof) [] "" str
+  result <- runParserT (termP <* (spaces >> eof)) [] "" str
   either (Left . show) Right result
 
 litP :: Parser Term
-litP = (string "true" >> return TmTrue)
-  <|> (string "false" >> return TmFalse)
-  <|> (string "0" >> return TmZero)
+litP = (string "true" >> return (TmBool True))
+  <|> (string "false" >> return (TmBool False))
+  <|> (fmap (TmNat . read) (many1 digit))
 
 termP :: Parser Term
 termP = litP <|> varP <|> sExpP
@@ -43,7 +43,7 @@ varP = do
     Nothing -> throwError $ var ++ " is not bound"
 
 sExpP :: Parser Term
-sExpP = between (char '(' >> spaces) (spaces >> char ')') $ lambdaP <|> ifP <|> applyP
+sExpP = between (char '(' >> spaces) (spaces >> char ')') $ lambdaP <|> ifP <|> fixP <|> eqP <|> opP <|> applyP
   where
     lambdaP = do
       string "lambda" <|> string "λ"
@@ -70,6 +70,33 @@ sExpP = between (char '(' >> spaces) (spaces >> char ')') $ lambdaP <|> ifP <|> 
       spaces1
       branch2 <- termP
       return $ TmIf cond branch1 branch2
+    
+    fixP = do
+      string "fix"
+      spaces1
+      term <- termP
+      spaces
+      return $ TmFix term 
+
+    eqP = do
+      string "=" <|> string "eq"
+      spaces1 
+      m <- termP
+      spaces1
+      n <- termP
+      return $ TmEq m n
+
+    opP = do
+      op <- (string "+" >> return OpAdd)
+        <|> (string "*" >> return OpMult)
+        <|> (string "-" >> return OpMinus)
+        <|> (string "and" >> return OpAnd)
+        <|> (string "or" >> return OpOr)
+      spaces1
+      m <- termP
+      spaces1
+      n <- termP
+      return $ TmBinOp op m n
 
 typeHintP :: Parser (Var, Type)
 typeHintP = between (char '[' >> spaces) (spaces >> char ']') $ do
@@ -86,3 +113,8 @@ typeHintP = between (char '[' >> spaces) (spaces >> char ']') $ do
 -- (lambda z ((lambda y (lambda x x)) (lambda x (z x))))
 -- (lambda n (lambda s (lambda z (s ((n s) z)))))
 -- ((lambda n (lambda s (lambda z (s ((n s) z))))) (lambda s (lambda z z)))
+
+-- (fix
+--   (lambda [self: Nat -> Nat]
+--     (lambda [x: Nat]
+--       (if (= x 0) 1 (* x (self (- x 1)))))))
