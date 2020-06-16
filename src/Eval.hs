@@ -1,7 +1,4 @@
 module Eval (
-  tmShift,
-  tmSub,
-  tmSubTop,
   eval,
   showTerm,
   typeOf,
@@ -22,6 +19,7 @@ tmMap c onVar (TmIf cond b1 b2) = TmIf (tmMap c onVar cond) (tmMap c onVar b1) (
 tmMap c onVar (TmFix tm) = TmFix $ tmMap c onVar tm
 tmMap c onVar (TmEq m n) = TmEq (tmMap c onVar m) (tmMap c onVar n)
 tmMap c onVar (TmBinOp op m n) = TmBinOp op (tmMap c onVar m) (tmMap c onVar n)
+tmMap c onVar (TmLet var m n) = TmLet var (tmMap c onVar m) (tmMap c onVar n)
 
 tmShift :: Int -> Term -> Term
 tmShift d tm = tmMap 0 (\c k -> if k < c then (TmVar k) else (TmVar (k+d))) tm
@@ -75,6 +73,13 @@ typeOf (TmBinOp op m n) = do
     _ | op `elem` [OpAdd, OpMinus, OpMult] && (tyM == NatType && tyN == NatType) -> return NatType
     _ | op `elem` [OpAnd, OpOr] && (tyM == BoolType && tyN == BoolType) -> return BoolType
     _ -> throwError "TmBinOp: type error"
+typeOf (TmLet _ t1 t2) = do
+  env <- get
+  ty1 <- typeOf t1 
+  put (ty1 : env)
+  ty2 <- typeOf t2
+  put env
+  return ty2
 
 eval :: Term -> StateT [Type] (Either String) Term
 eval term = do
@@ -110,6 +115,9 @@ eval term = do
     step env (TmBinOp op m n)
       | isVal env m = fmap (\n' -> TmBinOp op m n') (step env n)
       | otherwise = fmap (\m' -> TmBinOp op m' n) (step env m)
+    step env (TmLet x t1 t2)
+      | isVal env t1 = return (tmSubTop t1 t2)
+      | otherwise = fmap (\t1' -> TmLet x t1' t2) (step env t1)
     step _ _ = Nothing
 
     isVal :: [Type] -> Term -> Bool

@@ -24,6 +24,7 @@ dependencies:
 - parsec
 - mtl
 - recursion-schemes
+- hspec
 
 library:
   source-dirs: src

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b0939b04572aa9898035d93a78b5e079c9ae640153c0e05c5a24db361f4873cc
+-- hash: 2fa889122c19bbc80cb0e21fc92328f843b47275d96276fd823259e8e379960a
 
 name:           tapl-haskell
 version:        0.1.0.0
@@ -36,6 +36,7 @@ library
       src
   build-depends:
       base >=4.7 && <5
+    , hspec
     , mtl
     , parsec
     , recursion-schemes
@@ -50,6 +51,7 @@ executable tapl-haskell-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , hspec
     , mtl
     , parsec
     , recursion-schemes
@@ -66,6 +68,7 @@ test-suite tapl-haskell-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , hspec
     , mtl
     , parsec
     , recursion-schemes

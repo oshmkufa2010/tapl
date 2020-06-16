@@ -1,4 +1,4 @@
-((fix
+(let [fac = (fix
   (lambda [self: Nat -> Nat]
     (lambda [x: Nat]
-      (if (= x 0) 1 (* x (self (- x 1))))))) 10)
+      (if (= x 0) 1 (* x (self (- x 1)))))))] (fac 10))

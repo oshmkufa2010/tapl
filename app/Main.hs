@@ -13,4 +13,4 @@ main = do
   let result = parse content >>= \term -> evalStateT (typeOf term >> eval term) []
   case result of
     Left err -> putStrLn err
-    Right val -> putStrLn $ show val
+    Right val -> putStrLn $ showTerm val

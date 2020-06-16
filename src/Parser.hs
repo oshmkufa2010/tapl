@@ -1,8 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 
 module Parser (
-  Type(..),
-  Term(..),
   parse,
 ) where
 
@@ -26,7 +24,7 @@ litP = (string "true" >> return (TmBool True))
   <|> (fmap (TmNat . read) (many1 digit))
 
 termP :: Parser Term
-termP = litP <|> varP <|> sExpP
+termP = try litP <|> varP <|> sExpP
 
 spaces1 :: Parser ()
 spaces1 = skipMany1 space
@@ -43,7 +41,14 @@ varP = do
     Nothing -> throwError $ var ++ " is not bound"
 
 sExpP :: Parser Term
-sExpP = between (char '(' >> spaces) (spaces >> char ')') $ lambdaP <|> ifP <|> fixP <|> eqP <|> opP <|> applyP
+sExpP = between (char '(' >> spaces) (spaces >> char ')') $
+  (try lambdaP)
+  <|> (try letP)
+  <|> (try ifP)
+  <|> (try fixP)
+  <|> (try eqP)
+  <|> (try opP)
+  <|> applyP
   where
     lambdaP = do
       string "lambda" <|> string "λ"
@@ -98,23 +103,30 @@ sExpP = between (char '(' >> spaces) (spaces >> char ')') $ lambdaP <|> ifP <|> 
       n <- termP
       return $ TmBinOp op m n
 
-typeHintP :: Parser (Var, Type)
-typeHintP = between (char '[' >> spaces) (spaces >> char ']') $ do
-  var <- idP
-  between spaces spaces $ char ':'
-  types <- primTypeP `sepBy1` (between spaces spaces (string "->"))
-  return (var, foldr1 FnType types)
-  where
-    primTypeP = (string "Bool" >> return BoolType)
-      <|> (string "Nat" >> return NatType)
-      <|> (string "Unknown" >> return Unknown)
+    letP = do
+      string "let"
+      spaces1
+      char '[' >> spaces
+      var <- idP
+      spaces
+      char '='
+      spaces
+      varTerm <- termP
+      spaces >> char ']' 
+      spaces1
+      ctx <- getState
+      putState (var : ctx)
+      body <- termP 
+      putState ctx
+      return $ TmLet var varTerm body
 
--- (lambda f ((lambda x (f (lambda y ((x x) y)))) (lambda x (f (lambda y ((x x) y))))))
--- (lambda z ((lambda y (lambda x x)) (lambda x (z x))))
--- (lambda n (lambda s (lambda z (s ((n s) z)))))
--- ((lambda n (lambda s (lambda z (s ((n s) z))))) (lambda s (lambda z z)))
-
--- (fix
---   (lambda [self: Nat -> Nat]
---     (lambda [x: Nat]
---       (if (= x 0) 1 (* x (self (- x 1)))))))
+    typeHintP :: Parser (Var, Type)
+    typeHintP = between (char '[' >> spaces) (spaces >> char ']') $ do
+      var <- idP
+      between spaces spaces $ char ':'
+      types <- primTypeP `sepBy1` (between spaces spaces (string "->"))
+      return (var, foldr1 FnType types)
+      where
+        primTypeP = (string "Bool" >> return BoolType)
+          <|> (string "Nat" >> return NatType)
+          <|> (string "Unknown" >> return Unknown)
